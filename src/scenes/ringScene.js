@@ -3,6 +3,8 @@ import * as BABYLON from '@babylonjs/core';
 document.addEventListener('DOMContentLoaded', function () {
     const canvas = document.getElementById('renderCanvas');
     const engine = new BABYLON.Engine(canvas);
+    engine.enableOfflineSupport = false;
+    BABYLON.Animation.AllowMatricesInterpolation = true;
 
     const createScene = function () {
         const scene = new BABYLON.Scene(engine);
@@ -239,8 +241,123 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     const scene = createScene();
+    function createDummy() {
+        BABYLON.SceneLoader.ImportMesh("", "/assets/models/", "dummy2.babylon", scene, function (newMeshes, particleSystems, skeletons) {
+            var skeleton = skeletons[0];
 
+            shadowGenerator.addShadowCaster(scene.meshes[0], true);
+            for (var index = 0; index < newMeshes.length; index++) {
+                newMeshes[index].receiveShadows = false;;
+            }
+
+            var helper = scene.createDefaultEnvironment({
+                enableGroundShadow: true
+            });
+            helper.setMainColor(BABYLON.Color3.Gray());
+            helper.ground.position.y += 0.01;
+
+            var idleAnim = scene.beginWeightedAnimation(skeleton, 0, 89, 1.0, true);
+            var walkAnim = scene.beginWeightedAnimation(skeleton, 90, 118, 0, true);
+            var runAnim = scene.beginWeightedAnimation(skeleton, 119, 135, 0, true);
+
+            // UI
+            var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+            var UiPanel = new BABYLON.GUI.StackPanel();
+            UiPanel.width = "220px";
+            UiPanel.fontSize = "14px";
+            UiPanel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+            UiPanel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+            advancedTexture.addControl(UiPanel);
+            var params = [
+                { name: "Idle", anim: idleAnim },
+                { name: "Walk", anim: walkAnim },
+                { name: "Run", anim: runAnim }
+            ]
+            params.forEach((param) => {
+                var header = new BABYLON.GUI.TextBlock();
+                header.text = param.name + ":" + param.anim.weight.toFixed(2);
+                header.height = "40px";
+                header.color = "green";
+                header.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+                header.paddingTop = "10px";
+                UiPanel.addControl(header);
+                var slider = new BABYLON.GUI.Slider();
+                slider.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+                slider.minimum = 0;
+                slider.maximum = 1;
+                slider.color = "green";
+                slider.value = param.anim.weight;
+                slider.height = "20px";
+                slider.width = "205px";
+                UiPanel.addControl(slider);
+                slider.onValueChangedObservable.add((v) => {
+                    param.anim.weight = v;
+                    header.text = param.name + ":" + param.anim.weight.toFixed(2);
+                })
+                param.anim._slider = slider;
+            });
+
+            var button = BABYLON.GUI.Button.CreateSimpleButton("but0", "From idle to walk");
+            button.paddingTop = "10px";
+            button.width = "100px";
+            button.height = "50px";
+            button.color = "white";
+            button.background = "green";
+            button.onPointerDownObservable.add(function () {
+                idleAnim._slider.value = 1.0;
+                walkAnim._slider.value = 0;
+                runAnim._slider.value = 0.0;
+                // Synchronize animations
+                walkAnim.syncWith(null);
+                idleAnim.syncWith(walkAnim);
+                let obs = scene.onBeforeAnimationsObservable.add(function () {
+                    idleAnim._slider.value -= 0.01;
+
+                    if (idleAnim._slider.value <= 0) {
+                        scene.onBeforeAnimationsObservable.remove(obs);
+                        idleAnim._slider.value = 0;
+                        walkAnim._slider.value = 1.0;
+                    } else {
+                        walkAnim._slider.value = 1.0 - idleAnim._slider.value;
+                    }
+                })
+            });
+            UiPanel.addControl(button);
+
+            button = BABYLON.GUI.Button.CreateSimpleButton("but0", "From walk to run");
+            button.paddingTop = "10px";
+            button.width = "100px";
+            button.height = "50px";
+            button.color = "white";
+            button.background = "green";
+            button.onPointerDownObservable.add(function () {
+                walkAnim._slider.value = 1.0;
+                idleAnim._slider.value = 0;
+                runAnim._slider.value = 0.0;
+                // Synchronize animations
+                walkAnim.syncWith(runAnim);
+                let obs = scene.onBeforeAnimationsObservable.add(function () {
+                    walkAnim._slider.value -= 0.01;
+
+                    if (walkAnim._slider.value <= 0) {
+                        scene.onBeforeAnimationsObservable.remove(obs);
+                        walkAnim._slider.value = 0;
+                        runAnim._slider.value = 1.0;
+                    } else {
+                        runAnim._slider.value = 1.0 - walkAnim._slider.value;
+                    }
+                })
+            });
+            UiPanel.addControl(button);
+
+            engine.hideLoadingUI();
+        }, function (evt) {
+        });
+
+    }
+    createDummy();
     engine.runRenderLoop(function () {
         scene.render();
     });
 });
+
