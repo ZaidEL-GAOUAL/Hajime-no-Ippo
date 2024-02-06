@@ -236,7 +236,7 @@ export const createScene = function () {
 };
 
 //const scene = createScene();
-/*function createDummy() {
+export function createDummy(scene) {
     BABYLON.SceneLoader.ImportMesh("", "/assets/models/", "dummy2.babylon", scene, function (newMeshes, particleSystems, skeletons) {
         var skeleton = skeletons[0];
 
@@ -350,7 +350,6 @@ export const createScene = function () {
     });
 
 }
-createDummy();*/
 
 
 
