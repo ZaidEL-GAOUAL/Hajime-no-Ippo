@@ -8,6 +8,7 @@ BABYLON.Animation.AllowMatricesInterpolation = true;
 
 export const createScene = function () {
     const scene = new BABYLON.Scene(engine);
+    //scene.enablePhysics(new BABYLON.Vector3(0, -9.81, 0), new BABYLON.CannonJSPlugin());
 
 
 
@@ -21,7 +22,7 @@ export const createScene = function () {
 
 
 
-    BABYLON.SceneLoader.ImportMesh("", "/assets/models/", "scene.gltf", scene, function (newMeshes, particleSystems, skeletons) {
+    BABYLON.SceneLoader.ImportMesh("", "/assets/models/", "scene.glb", scene, function (newMeshes, particleSystems, skeletons) {
     }
     );
     //Creating Stands on all four sides of the ring

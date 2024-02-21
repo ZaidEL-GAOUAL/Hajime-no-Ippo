@@ -11,8 +11,8 @@ export function createDummy(scene) {
 
             var character = newMeshes[0];
             console.log(character);
-            character.scaling = new BABYLON.Vector3(1.5, 1.5, 1.5);
-            character.position = new BABYLON.Vector3(0, 0.3, 0);
+            character.scaling = new BABYLON.Vector3(2.5, 2.5, 2.5);
+            character.position = new BABYLON.Vector3(0, 5.6, 0);
             resolve(character);
         }, function (evt) {
             // Optionally handle progress or errors here
