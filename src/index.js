@@ -1,17 +1,20 @@
 import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/inspector';
 import '@babylonjs/loaders';
-import { createScene } from './scenes/ringScene';
-import { moveCharacter } from './characters/Prototype';
+import RingScene from './scenes/ringScene';
+import Player from './characters/Player';
 
-window.onload = () => {
-
+window.onload = async () => {
     const canvas = document.getElementById('renderCanvas');
     const engine = new BABYLON.Engine(canvas);
 
-    const scene = createScene(engine, canvas);
-    const camera = new BABYLON.ArcRotateCamera('camera', Math.PI / 2, Math.PI / 4, 4, new BABYLON.Vector3(0, 1, 0), scene);
-    camera.attachControl(canvas, true);
+
+    let ringScene = new RingScene(engine);
+    let scene = await ringScene.createScene(); // Now 'scene' is a Babylon.js Scene object
+
+    let ippo = new Player(scene, "./characters/BoxerAnimations.glb");
+    await ippo.loadModel();
+
     scene.debugLayer.show({ overlay: true });
 
 
@@ -26,20 +29,19 @@ window.onload = () => {
     });
 
     window.addEventListener('keydown', function (e) {
-        let prototyp = scene.getMeshByName("Third Person");
 
         switch (e.key) {
             case 'z': // Move character forward
-                moveCharacter("z", 0.2, prototyp);
+                ippo.move("up", 0.2);
                 break;
             case 's': // Move character backward
-                moveCharacter("s", 0.2, prototyp);
+                ippo.move("down", 0.2);
                 break;
             case 'd': // Move character left
-                moveCharacter("d", 0.2, prototyp);
+                ippo.move("left", 0.2);
                 break;
             case 'q': // Move character right
-                moveCharacter("q", 0.2, prototyp);
+                ippo.move("right", 0.2);
                 break;
         }
     });
