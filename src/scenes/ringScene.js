@@ -3,17 +3,14 @@ import * as BABYLON from '@babylonjs/core';
 class RingScene {
     constructor(engine) {
         this.engine = engine;
-        // Ensure 'this.scene' is initialized right in the constructor,
-        // not inside 'createScene', to avoid referencing it before initialization.
         this.scene = new BABYLON.Scene(engine);
 
     }
 
     createScene() {
-        // Since 'this.scene' is already initialized in the constructor,
-        // we can safely use it here.
+
         const camera = new BABYLON.ArcRotateCamera('camera', Math.PI / 2, Math.PI / 4, 4, new BABYLON.Vector3(0, 1, 0), this.scene);
-        camera.attachControl(canvas, true);
+        camera.attachControl(this.engine.canvas, true);
         // Light setup
         const light = new BABYLON.HemisphericLight('light', new BABYLON.Vector3(0, 1, 0), this.scene);
         light.intensity = 0.8;
@@ -36,14 +33,14 @@ class RingScene {
 }
 
 // Usage example
-const canvas = document.getElementById('renderCanvas');
+/*const canvas = document.getElementById('renderCanvas');
 const engine = new BABYLON.Engine(canvas, true);
 const ringScene = new RingScene(engine);
 ringScene.createScene(); // Setup the scene with lights, ground, etc.
 
 engine.runRenderLoop(() => {
     ringScene.scene.render(); // Access the 'scene' property for rendering.
-});
+});*/
 
 
 export default RingScene;

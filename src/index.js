@@ -3,14 +3,19 @@ import '@babylonjs/inspector';
 import '@babylonjs/loaders';
 import RingScene from './scenes/ringScene';
 import Player from './characters/Player';
+import { InputController } from './inputController';
+import { GlobalManager } from './GlobalManager';
 
 window.onload = async () => {
     const canvas = document.getElementById('renderCanvas');
-    const engine = new BABYLON.Engine(canvas);
+    GlobalManager.initialize(canvas);
+    const engine = GlobalManager.getEngine();
+    InputController.init();
+
 
 
     let ringScene = new RingScene(engine);
-    let scene = await ringScene.createScene(); // Now 'scene' is a Babylon.js Scene object
+    let scene = await ringScene.createScene();
 
     let ippo = new Player(scene, "./characters/BoxerAnimations.glb");
     await ippo.loadModel();
@@ -20,7 +25,12 @@ window.onload = async () => {
 
     engine.runRenderLoop(() => {
         scene.render();
+        const deltaTime = engine.getDeltaTime() / 1000.0; // Convert ms to seconds
+        InputController.update(deltaTime);
+        GlobalManager.update(deltaTime);
 
+        ippo.update(deltaTime); // Update the player's state based on inputs and animations
+        InputController.resetActions(); // Reset actions for the next frame
 
     });
 
@@ -30,20 +40,7 @@ window.onload = async () => {
 
     window.addEventListener('keydown', function (e) {
 
-        switch (e.key) {
-            case 'z': // Move character forward
-                ippo.move("up", 0.2);
-                break;
-            case 's': // Move character backward
-                ippo.move("down", 0.2);
-                break;
-            case 'd': // Move character left
-                ippo.move("left", 0.2);
-                break;
-            case 'q': // Move character right
-                ippo.move("right", 0.2);
-                break;
-        }
+
     });
 
 };

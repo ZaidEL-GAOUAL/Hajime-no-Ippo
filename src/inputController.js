@@ -1,4 +1,5 @@
 import { GamepadManager, KeyboardEventTypes, Scalar, Vector2, Vector3 } from "@babylonjs/core";
+import { GlobalManager } from './GlobalManager';
 
 class InputController {
     #gamepadManager;
@@ -13,7 +14,7 @@ class InputController {
 
     constructor() {
         this.actionMap = {
-            moveForward: ["ArrowUp", "KeyW"],
+            moveForward: ["ArrowUp", "KeyZ"],
             moveBackward: ["ArrowDown", "KeyS"],
             moveLeft: ["ArrowLeft", "KeyA"],
             moveRight: ["ArrowRight", "KeyD"],
