@@ -1,5 +1,4 @@
 import * as BABYLON from '@babylonjs/core';
-
 import { InputController } from "../inputController";
 
 class Player {
@@ -9,65 +8,68 @@ class Player {
         this.character = null;
         this.skeleton = null;
         this.animations = {};
-        this.movementSpeed = 0.0; // Define a suitable movement speed
-        this.isWalking = false; // Track whether the player is walking
+        this.movementSpeed = 0.9; // Define a suitable movement speed
         this.isAnimating = false;
-
     }
 
     async loadModel() {
-        // Adjusted from your createDummy function
         return new Promise((resolve, reject) => {
-            BABYLON.SceneLoader.ImportMesh("", "./characters/", "BoxerAnimations.glb", this.scene, (newMeshes, Skeletons, AnimationGroup) => {
+            BABYLON.SceneLoader.ImportMesh("", "./characters/", "BoxerAnimations.glb", this.scene, (newMeshes, Skeletons) => {
                 this.character = newMeshes[0];
-                var skeleton = AnimationGroup[0];
+                this.scene.stopAllAnimations();
+                this.animations['idle'] = this.scene.getAnimationGroupByName('Boxing stance 2');
+                this.animations['walk'] = this.scene.getAnimationGroupByName('Step forward');
+                this.animations['backward'] = this.scene.getAnimationGroupByName('step backward');
+                this.animations['punch'] = this.scene.getAnimationGroupByName('Jab body');
+                this.animations['left'] = this.scene.getAnimationGroupByName('Left pivot');
+                this.animations['right'] = this.scene.getAnimationGroupByName('Right pivot');
 
                 this.initializeCharacterProperties();
 
                 resolve(this.character);
-            }, function (evt) {
-                if (evt.lengthComputable) {
-                    var percentComplete = (evt.loaded * 100 / evt.total);
-                    console.log("percentComplete: " + percentComplete + "%");
-                } else {
-                    console.log("Loading...");
-                }
-            }
-            )
+            });
         });
     }
 
     initializeCharacterProperties() {
-        // Set initial character properties like scale and position
         this.character.scaling = new BABYLON.Vector3(2.5, 2.5, 2.5);
-        this.character.position = new BABYLON.Vector3(0, 5.6, 0);
-        this.playAnimation('Boxing stance 2', true);
+        this.character.position = new BABYLON.Vector3(0, 5.9, 0);
+        this.character.physicsImpostor = new BABYLON.PhysicsImpostor(
+            this.character,
+            BABYLON.PhysicsImpostor.BoxImpostor, // Consider changing if the shape doesn't match
+            { mass: 0, restitution: 0.1 }, // Lower restitution to avoid bouncy effects
+            this.scene
+        );
+        this.playAnimation('idle', null, true);
     }
 
-    playAnimation(name, loop, blendingSpeed = 0.1) {
-        var idleRange = this.scene.getAnimationGroupByName(name);
-        if (idleRange) {
-            this.isAnimating = true;
-            idleRange.start(loop, 1.0, idleRange.from, idleRange.to, false);
-            idleRange.targetedAnimations.forEach(ta => {
-                ta.animation.enableBlending = true;
-                ta.animation.blendingSpeed = blendingSpeed;
-            });
+    playAnimation(name, movement, loop, blendingSpeed = 0.1) {
+        var animation = this.animations[name];
+        if (animation) {
+            // Stop and clear any current animation that's not the one we want to play
+            if (this.currentAnimation && this.currentAnimation !== animation) {
+                this.currentAnimation.onAnimationEndObservable.clear();
+                this.currentAnimation.stop();
+            }
 
-            idleRange.onAnimationEndObservable.addOnce(() => {
-                this.isAnimating = false;
-                // Assuming the animation actually moves the character, apply this new position
-                const lastAnimation = idleRange.targetedAnimations.find(ta => ta.target === this.character);
-                const lastKey = lastAnimation?.animation.getKeys().slice(-1)[0];
-                if (lastKey && 'position' in lastKey.value) {
-                    // Apply the position from the animation to the character's actual position
-                    this.character.position = this.character.position.add(lastKey.value.position);
-                }
-            });
+            this.currentAnimation = animation;
 
-            if (loop) {
-                idleRange.onAnimationLoopObservable.addOnce(() => {
-                    this.isAnimating = false;  // Reset only after one full loop if needed
+            //if (name !== 'idle') {
+            animation.enableBlending = true;
+            animation.blendingSpeed = blendingSpeed;
+            // }
+            animation.start(loop);
+
+            if (!loop) {
+                // Listen for the end of the animation to then trigger movement
+                animation.onAnimationEndObservable.addOnce(() => {
+                    this.isAnimating = false;
+                    // Check if a movement direction is defined to then move
+                    if (movement) {
+                        this.move(movement);
+                    }
+                    // After the action, revert to idle unless another action is triggered
+                    this.playAnimation('idle', null, true);
                 });
             }
         } else {
@@ -77,65 +79,53 @@ class Player {
     }
 
 
+    move(direction) {
+        let velocity = new BABYLON.Vector3(0, 0, 0);
+        let distance = this.movementSpeed;  // Adjust speed as necessary
 
-    move(direction, distance) {
-        // Adjust the movement logic based on the direction
-        let moveVec = new BABYLON.Vector3(0, 0, 0);
         switch (direction) {
-            case 'up':
-                moveVec.z -= distance;
+            case 'forward':
+                velocity.z += distance;
                 break;
-            case 'down':
-                moveVec.z += distance;
+            case 'backward':
+                velocity.z -= distance;
                 break;
             case 'left':
-                moveVec.x -= distance;
+                velocity.x -= distance;
                 break;
             case 'right':
-                moveVec.x += distance;
+                velocity.x += distance;
                 break;
         }
-        this.character.moveWithCollisions(moveVec); // Assuming moveWithCollisions is available
 
-        if (!this.isWalking) {
-            this.isWalking = true;
+        // Apply velocity based on the character's orientation
+        velocity.rotateByQuaternionToRef(this.character.rotationQuaternion, velocity);
+        if (this.character.physicsImpostor) {
+            this.character.physicsImpostor.setLinearVelocity(velocity);
         }
     }
 
-    update(deltaTime) {
-        if (this.isAnimating) return;  // Skip handling inputs if an animation is active
 
-        let isMoving = false; // Track if there's any movement input
+    update(deltaTime) {
+        if (this.isAnimating) return;
 
         if (InputController.isActionActive("moveForward")) {
-            this.playAnimation('Step forward', false);
-
-            this.move('up', this.movementSpeed * deltaTime);
-            isMoving = true;
+            this.playAnimation('walk', 'up', false);
         }
         if (InputController.isActionActive("moveBackward")) {
-            this.playAnimation('step backward', false);
-            this.move('down', this.movementSpeed * deltaTime);
-            isMoving = true;
+            this.playAnimation('backward', 'down', false);
         }
         if (InputController.isActionActive("moveLeft")) {
-            this.move('left', this.movementSpeed * deltaTime);
-            isMoving = true;
+            this.playAnimation('left', 'left', false);
         }
         if (InputController.isActionActive("moveRight")) {
-            this.move('left', this.movementSpeed * deltaTime);
-
-            isMoving = true;
+            this.playAnimation('right', 'right', false);
         }
 
-        // If not moving and was previously walking, switch to idle animation
-        if (!isMoving && this.isWalking) {
-            this.playAnimation('Boxing stance 2', true);
-            this.isWalking = false; // Update walking state
-        }
+
 
         if (InputController.isActionActive("punch")) {
-            this.playAnimation('Head hit', false);
+            this.playAnimation('punch', null, false);
         }
     }
 }

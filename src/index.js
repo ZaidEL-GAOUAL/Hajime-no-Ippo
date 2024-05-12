@@ -6,6 +6,10 @@ import Player from './characters/Player';
 import { InputController } from './inputController';
 import { GlobalManager } from './GlobalManager';
 
+
+
+
+
 window.onload = async () => {
     const canvas = document.getElementById('renderCanvas');
     GlobalManager.initialize(canvas);
@@ -20,7 +24,12 @@ window.onload = async () => {
     let ippo = new Player(scene, "./characters/BoxerAnimations.glb");
     await ippo.loadModel();
 
-    scene.debugLayer.show({ overlay: true });
+    scene.debugLayer.show({
+        showPhysicsImpostors: true
+    });
+    scene.debugLayer.show({
+        embedMode: true
+    });
 
 
     engine.runRenderLoop(() => {
